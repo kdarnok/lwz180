@@ -166,8 +166,11 @@ by the LWZ 180 at all (as those elements are missing in the documentation). They
 ## Arduino sketch
 I am using an Arduino Micro, as it has hardware I²C support and two UARTs (one for the KNX bus and one for
 debugging via USB). As it runs with 5V, it can be directly powered by the Siemens BCU.
+It uses the [KnxTpUart](https://github.com/thorsten-gehrig/arduino-tpuart-knx-user-forum) library to interface with the KNX bus
+via the Siemens BCU.
 
-code coming soon...
+[lwz180.ino](lwz180.ino)
+
 
 ## Wiring
 In order to isolate the KNX bus from the LWZ's I²C bus, I threw in an ISO1540 isolator (Adafruit offeres a small breakout board, which makes this very painless). Should I decide to
