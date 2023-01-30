@@ -29,9 +29,7 @@ more types can be seen):
 * 7 bytes, starting `e3 30 20` (commands due to pressed buttons at the control unit)
 * 28 bytes, starting with `f7 20` (those are updating the control unit display)
 
-Each of the packets ends with a single byte checksum. I did not figure out how exactly it is
-calculated, but for my purposes it will only be necessary to replay a small discrete set of
-packets and not make up arbitrary ones on the fly.
+Each of the packets ends with a single byte checksum. This is an 8-bit CRC using the polynomial `0x49`.
 
 It looks like the three bytes distinguish the type of packet and identify sender and
 receiver addresses, but again, for my purpose this did not matter at all. I will call those three bytes the header,
@@ -75,7 +73,7 @@ There are also `0x12` and `0x13`, which look like preassure values (inside and o
 ### Buttons
 In only the last byte of the payload differs from zero. The values have the following meaning:
 
-|payload|button                         |
+|code   |button                         |
 |-------|:------------------------------|
 |1      |down (wheel)                   |
 |2      |up (wheel)                     |
@@ -89,7 +87,9 @@ In only the last byte of the payload differs from zero. The values have the foll
 |12     |power vent (long)              |
 |13     |cleaning lock: home + ok (long)|
 
-Wheel up/down is only accepted if sent in pairs in short succession.
+Wheel up/down is only accepted if sent in pairs in short succession. It so happens that the checksum of the header
+of such a button packet is just `0x00`, hence the checksum of the whole packet equals the checksum of that
+single code byte.
 
 
 ### Display updates
@@ -162,6 +162,9 @@ There are some display elements I have not encountered (inlet air heating, error
 by the LWZ 180 at all (as those elements are missing in the documentation). They can be seen briefly during startup:
 
 <img src="images/full_display.jpg" width="400"/>
+
+One could actually make use of them by putting the Arduino in between the LWZ's main board and the control unit and relaying all I²C messages forth and back. Then any unused display elements could be used for custom purposes.
+
 
 ## Arduino sketch
 I am using an Arduino Micro, as it has hardware I²C support and two UARTs (one for the KNX bus and one for

@@ -24,17 +24,22 @@
 #define CHANGED_SCHEDULED 2
 #define CHANGED_LEVEL 4
 
+#define CRC_POLY 0x49  // generator of the 8-bit crc
+
+// button codes
+#define BUTTON_DOWN 0x01
+#define BUTTON_UP 0x02
+#define BUTTON_POWER_VENT 0x0c
+
 // #define PRINT_SERIAL 1  // enable debug printout via uart/usb
 
 byte ledVal = 0;  // current LED state for blinking when there's i2c activity
 uint32_t last = 0;  // timestamp of last KNX update
 uint32_t last_button = 0;  // timestamp of last i2c button packet we sent
 
-// pre-defined packets to emulate button presses
-// a bit wasteful, but also no need to understand the check sum (last byte)
-byte button_down[] = {0xe3, 0x30, 0x20, 0x00, 0x00, 0x01, 0x49};
-byte button_up[] = {0xe3, 0x30, 0x20, 0x00, 0x00, 0x02, 0x92};
-byte button_power_vent[] = {0xe3, 0x30, 0x20, 0x00, 0x00, 0x0c, 0xb7};
+// pre-defined buffer for the button packets. the last two bytes
+// (button code and checksum) are filled in as needed
+byte button_packet[] = {0xe3, 0x30, 0x20, 0x00, 0x00, 0x00, 0x00};
 
 // a measurement record -- glueing a register number from the i2c packet to the corresponding
 // KNX group address and the scaling factor
@@ -110,7 +115,6 @@ void setup() {
 // i2c handler
 void receiveEvent (int howMany) {
   byte data[28];
-//  digitalWrite (LED_BUILTIN, ledVal ^= 1);  // flash the LED on I2C activity
   
   Wire.readBytes(data, howMany);
   if (howMany == 7 and data[0] == 0xe3 and data[1] == 0x20) {
@@ -151,6 +155,34 @@ void receiveEvent (int howMany) {
       }
     }
   }
+}
+
+byte crc8(byte crc, byte *data, int len) {
+  while (len--) {crc = crc8_push_byte(crc, *data++);}
+  return crc;
+}
+
+byte crc8_push_byte(byte crc, byte data) {
+  crc ^= data;
+  for (int i = 0; i < 8; i++) {
+    if ((crc & 0x80) != 0) {
+      crc = (byte)((crc << 1) ^ CRC_POLY);
+    } else {
+      crc <<= 1;
+    }
+  }
+  return crc;
+}
+
+void send_button(byte code, byte count) {
+  digitalWrite (LED_BUILTIN, ledVal ^= 1);
+  button_packet[5] = code;
+  button_packet[6] = crc8_push_byte(0, code);
+  for (byte i = 0; i < count; i ++) {
+    if (i != 0) {delay(WHEEL_DELAY);}
+    send_cmd(button_packet);
+  }
+  digitalWrite (LED_BUILTIN, ledVal ^= 1);
 }
 
 void send_cmd(byte * cmd) {
@@ -222,7 +254,7 @@ void loop() {
           int8_t value = telegram->get1ByteIntValue();
           if ((value >= 0) and (value <= 2)) {target_level = value;}
         } else if (target == KNX_GA_POWER_SET) {
-          if (telegram->getBool() != stat.power_vent) {send_cmd(button_power_vent);}
+          if (telegram->getBool() != stat.power_vent) {send_button(BUTTON_POWER_VENT, 1);}
         } else if (target == KNX_GA_SCHEDULED_SET) {
           bool value = telegram->getBool();
           if ((bool)value != (bool)stat.scheduled) {
@@ -243,21 +275,16 @@ void loop() {
       target_level = -1;
       set_scheduled = false;
     } else if ((target_level > -1) or set_scheduled) {
-      byte * cmd;
+      byte code;
 
       if (set_scheduled) {
-        cmd = button_up;
+        code = BUTTON_UP;
       } else if ((stat.scheduled == 1) or (target_level < stat.level)) {
-        cmd = button_down;
+        code = BUTTON_DOWN;
       } else if (target_level > stat.level) {
-        cmd = button_up;
+        code = BUTTON_UP;
       }
-
-      digitalWrite (LED_BUILTIN, ledVal ^= 1);
-      send_cmd(cmd);
-      delay(WHEEL_DELAY);
-      send_cmd(cmd);
-      digitalWrite (LED_BUILTIN, ledVal ^= 1);
+      send_button(code, 2);
     }
     last_button = millis();
   }
