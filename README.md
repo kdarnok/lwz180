@@ -54,6 +54,7 @@ on the type of reading:
 |0x11|1      |I18 (exhaust air flow, calculated)   |m³/h|
 |0x14|0.1    |I15 (drive power supply air fan)     |%   |
 |0x15|0.1    |I17 (drive power exhaust air fan)    |%   |
+|0x16|1      |I19 (power internal pre-heater)      |%   |
 |0x1e|1      |P6                                   |m³/h|
 |0x1f|1      |P7                                   |m³/h|
 |0x20|1      |P8                                   |m³/h|
