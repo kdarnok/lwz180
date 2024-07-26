@@ -2,6 +2,8 @@
 
 Some reverse engineering to hook up an LWZ 180 unit to KNX using an Arduino Micro.
 
+Similar (or maybe exactly the same) protocol can be used to communicate with a VRC-W 400 unit.
+
 ## I²C bus
 
 According to the documentation, the LWZ180 features an I²C bus
@@ -44,32 +46,45 @@ on the type of reading:
 |----|-------|:------------------------------------|----|
 |0x00|0.1    |I13 (dew point extract air)          |°C  |
 |0x01|0.1    |I14 (dew point outdoor air)          |°C  |
+|0x02|1      |Fan stage setting (same as 0x05, 0x69, 0x6D) |0-3 |
+|0x05|1      |Fan stage setting (same as 0x02, 0x69, 0x6D) |0-3 |
 |0x06|0.1    |I9 (temperature outdoor air)         |°C  |
 |0x07|0.1    |I10 (temperature supply air)         |°C  |
 |0x08|0.1    |I2 (temperature extract air)         |°C  |
 |0x09|0.1    |I11 (temperature exhaust air)        |°C  |
+|0x0a|?      |Something correlated with supply fan speed | ? |
+|0x0b|?      |Something correlated with exhaust fan speed | ? |
+|0x0c|1      |I23 (Fan speed, supply air fan)      |rpm |
+|0x0d|1      |I24 (Fan speed, exhaust air fan)     |rpm |
 |0x0e|0.1    |I12 (rel. humidity outdoor air)      |%   |
 |0x0f|0.1    |I3 (rel. humidity extract air)       |%   |
-|0x10|1      |I16 (suuply air flow, calculated)    |m³/h|
+|0x10|1      |I16 (supply air flow, calculated)    |m³/h|
 |0x11|1      |I18 (exhaust air flow, calculated)   |m³/h|
+|0x12|1      |Flowrate setting (same for supply or exhaust) |m³/h|
+|0x13|1      |Flowrate setting (same for supply or exhaust) |m³/h|
 |0x14|0.1    |I15 (drive power supply air fan)     |%   |
 |0x15|0.1    |I17 (drive power exhaust air fan)    |%   |
 |0x16|1      |I19 (power internal pre-heater)      |%   |
-|0x1e|1      |P6                                   |m³/h|
-|0x1f|1      |P7                                   |m³/h|
-|0x20|1      |P8                                   |m³/h|
-|0x21|1      |P9                                   |m³/h|
+|0x1a|1      |Current hour, changes at full hour (0 is at 4 PM and 23 is at 3PM) | |
+|0x1b|1      |Current hour, changes at full hour (0 is at 4 PM and 23 is at 3PM) | |
+|0x1e|1      |P6 (Flow rate, stage 0)              |m³/h|
+|0x1f|1      |P7 (Flow rate, stage 1)              |m³/h|
+|0x20|1      |P8 (Flow rate, stage 2)              |m³/h|
+|0x21|1      |P9 (Flow rate, stage 3)              |m³/h|
+|0x35|0.1    |Exhaust air temperature sensor resistance |Ohm |
+|0x36|0.1    |Supply air temperature sensor resistance  |Ohm |
+|0x49|1      |Heat exchanger bypass enabled        |1/0 |
+|0x4d|1      |P10                                  |Pa  |
 |0x50|1      |I21 (fan operating time)             |d   |
 |0x51|1      |I20 (ventilation unit operating time)|d   |
-|0x5a|1      |I4 (filter service life)             |h   |
-|0x4d|1      |P10                                  |Pa  |
 |0x53|1      |P11                                  |Pa  |
 |0x54|1      |P12                                  |Pa  |
 |0x55|1      |P13                                  |Pa  |
+|0x5a|1      |I4 (filter service life)             |h   |
+|0x69|1      |Fan stage setting (same as 0x02, 0x05, 0x6D) |0-3 |
+|0x6D|1      |Fan stage setting (same as 0x02, 0x05, 0x69) |0-3 |
 
-I could also see a few other types (`0x02`, `0x05`, `0x0d`, `0x0a`, `0x0b`, `0x0c`, `0x69`, `0x6d`, `0x12`, `0x13`, 
-`0x3b`), but could not attribute them with certainty to specific values.
-There are also `0x12` and `0x13`, which look like preassure values (inside and outside), but I could not confirm this, yet.
+I could also see a few other types (`0x3b`, `0x78`, `0x7B`, `0x7F`, `0x83`, `0x84`, `0x86`, `0xCD`), but could not attribute them with certainty to specific values.
 
 ### Buttons
 In only the last byte of the payload differs from zero. The values have the following meaning:
